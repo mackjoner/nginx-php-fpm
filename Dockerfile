@@ -1,4 +1,5 @@
-FROM php:7.3.3-fpm-alpine3.9
+# FROM php:7.3.3-fpm-alpine3.9
+FROM php:5.6-fpm-alpine
 
 LABEL maintainer="Ric Harvey <ric@ngd.io>"
 
@@ -14,7 +15,7 @@ ENV LUAJIT_INC=/usr/include/luajit-2.1
 
 # resolves #166
 ENV LD_PRELOAD /usr/lib/preloadable_libiconv.so php
-RUN apk add --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/community gnu-libiconv
+RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community gnu-libiconv
 
 RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
   && CONFIG="\
@@ -66,7 +67,7 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
     --add-module=/usr/src/lua-nginx-module-$LUA_MODULE_VERSION \
   " \
   && addgroup -S nginx \
-  && adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx \ 
+  && adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx \
   && apk add --no-cache --virtual .build-deps \
     autoconf \
     gcc \
@@ -105,7 +106,7 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
   && tar -zxC /usr/src -f nginx.tar.gz \
   && tar -zxC /usr/src -f ndk.tar.gz \
   && tar -zxC /usr/src -f lua.tar.gz \
-  && rm nginx.tar.gz ndk.tar.gz lua.tar.gz \ 
+  && rm nginx.tar.gz ndk.tar.gz lua.tar.gz \
   && cd /usr/src/nginx-$NGINX_VERSION \
   && ./configure $CONFIG --with-debug \
   && make -j$(getconf _NPROCESSORS_ONLN) \
@@ -157,7 +158,7 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
   && ln -sf /dev/stdout /var/log/nginx/access.log \
   && ln -sf /dev/stderr /var/log/nginx/error.log
 
-RUN echo @testing http://nl.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositories && \
+RUN echo @testing http://dl-cdn.alpinelinux.org/alpine/latest-stable/community >> /etc/apk/repositories && \
     echo /etc/apk/respositories && \
     apk update && apk upgrade &&\
     apk add --no-cache \
@@ -170,12 +171,12 @@ RUN echo @testing http://nl.alpinelinux.org/alpine/edge/testing >> /etc/apk/repo
     libzip-dev \
     bzip2-dev \
     imap-dev \
-    openssl-dev \
     git \
     python \
     python-dev \
     py-pip \
     augeas-dev \
+    libressl \
     libressl-dev \
     ca-certificates \
     dialog \
@@ -193,6 +194,7 @@ RUN echo @testing http://nl.alpinelinux.org/alpine/edge/testing >> /etc/apk/repo
     freetype-dev \
     sqlite-dev \
     libjpeg-turbo-dev \
+    libmemcached-dev \
     postgresql-dev && \
     docker-php-ext-configure gd \
       --with-gd \
@@ -202,7 +204,13 @@ RUN echo @testing http://nl.alpinelinux.org/alpine/edge/testing >> /etc/apk/repo
     #curl iconv session
     #docker-php-ext-install pdo_mysql pdo_sqlite mysqli mcrypt gd exif intl xsl json soap dom zip opcache && \
     docker-php-ext-install iconv pdo_mysql pdo_sqlite pgsql pdo_pgsql mysqli gd exif intl xsl json soap dom zip opcache && \
-    pecl install xdebug-2.7.0RC1 && \
+    pecl install xdebug-2.5.5 && \
+    pecl install memcached-2.2.0 && \
+    echo "extension=memcached.so" > /usr/local/etc/php/conf.d/memcached.ini && \
+    pecl install mongo && \
+    echo "extension=mongo.so" > /usr/local/etc/php/conf.d/mongo.ini && \
+    pecl install mongodb && \
+    echo "extension=mongodb.so" > /usr/local/etc/php/conf.d/mongodb.ini && \
     pecl install -o -f redis && \
     echo "extension=redis.so" > /usr/local/etc/php/conf.d/redis.ini && \
     docker-php-source delete && \
